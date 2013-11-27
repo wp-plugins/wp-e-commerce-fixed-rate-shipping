@@ -28,6 +28,12 @@ Enables free input for fixed rate shipping options, like:
 = 1.1 =
 Updated code assures compatibility with WP e-Commerce core files. Existing shipping options might be removed after update!
 
+== Frequently Asked Questions ==
+
+= Shipping options don't appear on checkout screen after update =
+
+* Check the Shipping settings, the options might be "overwritten" because of the new code structure and you will have to add them again
+
 == Changelog ==
 
 = 1.1 =
