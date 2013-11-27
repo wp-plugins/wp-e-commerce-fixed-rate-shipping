@@ -3,13 +3,13 @@
 Plugin Name: wpsc-simple-shipping
 Plugin URI: http://getshopped.org
 Description: Enables free input for fixed rate shipping options, like "pickup - $0, regular - $5, overnght - $10"
-Version: 1.0
-Author: Instinct ent.
-Author URI: http://instinct.co.nz
+Version: 1.1
+Author: Instinct Entertainment
+Author URI: http://getshopped.org/
 License: GPL2
 */
 
-/*  Copyright 2010  Instinct ent.
+/*  Copyright 2013  Instinct ent.
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License, version 2, as 
@@ -26,107 +26,174 @@ License: GPL2
 */
 
 
-class wpsc_simple_shipping {
+class wpsc_fixedrate {
 
 	var $internal_name, $name;
 
-
-	function wpsc_simple_shipping() {
-		$this->internal_name = "simple_shipping";
-		$this->name="Fixed rate";
+	/**
+	 * Constructor
+	 *
+	 * @return boolean Always returns true.
+	 */
+	function wpsc_fixedrate() {
+		$this->internal_name = "fixedrate";
+		$this->name= __( "Fixed Rate", 'wpsc' );
 		$this->is_external=false;
 		return true;
 	}
 
-
+	/**
+	 * Returns i18n-ized name of shipping module.
+	 *
+	 * @return string
+	 */
 	function getName() {
 		return $this->name;
 	}
 	
-	
+	/**
+	 * Returns internal name of shipping module.
+	 *
+	 * @return string
+	 */	
 	function getInternalName() {
 		return $this->internal_name;
 	}
 
-
+	/**
+	 * generates row of table rate fields
+	 */
+	private function output_row( $key = '', $shipping = '' ) {
+		$currency = wpsc_get_currency_symbol();
+		$class = ( $this->alt ) ? 'class="alternate"' : '';
+		$this->alt = ! $this->alt;
+		?>
+			<tr>
+				<td <?php echo $class; ?>>
+					<div class="cell-wrapper">
+						<small><?php echo esc_html( $currency ); ?></small>
+						<input type="text" name="wpsc_shipping_fixedrate_layer[]" value="<?php echo esc_attr( $key ); ?>" size="4" />
+					</div>
+				</td>
+				<td <?php echo $class; ?>>
+					<div class="cell-wrapper">
+						<small><?php echo esc_html( $currency ); ?></small>
+						<input type="text" name="wpsc_shipping_fixedrate_shipping[]" value="<?php echo esc_attr( $shipping ); ?>" size="4" />
+						<span class="actions">
+							<a tabindex="-1" title="<?php _e( 'Delete Layer', 'wpsc' ); ?>" class="button-secondary wpsc-button-round wpsc-button-minus" href="#"><?php echo _x( '&ndash;', 'delete item', 'wpsc' ); ?></a>
+							<a tabindex="-1" title="<?php _e( 'Add Layer', 'wpsc' ); ?>" class="button-secondary wpsc-button-round wpsc-button-plus" href="#"><?php echo _x( '+', 'add item', 'wpsc' ); ?></a>
+						</span>
+					</div>
+				</td>
+			</tr>
+		<?php
+	}
+	
+	/**
+	 * Returns HTML settings form. Should be a collection of <tr> elements containing two columns.
+	 *
+	 * @return string HTML snippet.
+	 */
 	function getForm() {
-
-		$output.="<tr><th>".__('Option', 'wpsc')."</th><th>".__('Shipping Price', 'wpsc')."</th></tr>";
-		$options = get_option('wpsc_simple_shipping');
-
-		if ($options != '') {
-
-			foreach ($options as $option => $price) {
-
-				$output.="<tr class='rate_row'>
-							<td>
-								<input type='text' name='options[]' value='$option' style='width:250px;' />
+		$layers = get_option( 'fixedrate_layers', array() );
+		$this->alt = false;
+		ob_start();
+		?>
+		<tr>
+			<td colspan='2'>
+				<table>
+					<thead>
+						<tr>
+							<th class="option"><?php _e('Shipping Option', 'wpsc' ); ?></th>
+							<th class="shipping"><?php _e( 'Shipping Price', 'wpsc' ); ?></th>
+						</tr>
+					</thead>
+					<tbody class="table-rate">
+						<tr class="js-warning">
+							<td colspan="2">
+								<small><?php echo sprintf( __( 'To remove a rate layer, simply leave the values on that row blank. By the way, <a href="%s">enable JavaScript</a> for a better user experience.', 'wpsc'), 'http://www.google.com/support/bin/answer.py?answer=23852' ); ?></small>
 							</td>
-							<td>
-								".wpsc_get_currency_symbol()."
-								<input type='text' value='{$price}' name='prices[]'	>
-								&nbsp;&nbsp;<a href='#' class='delete_button' >".__('Delete', 'wpsc')."</a>
-							</td>
-						</tr>";
-			}
-		}
-		$output.="<input type='hidden' name='checkpage' value='simple'>";
-		$output.= wp_nonce_field('aaaaaa','aaaaaa', false, false);
-		$output.="<tr class='addoption'><td colspan='2'><a href='#' style='cursor:pointer;' id='addoption' >Add Option</a></td></tr>";
-		$output.= '<script type="text/javascript">
-			jQuery("document").ready(function(){
-				jQuery(".addoption #addoption").click(function(){
-					jQuery(this).before("<tr class=\'rate_row\'><td><input type=\'text\' name=\'options[]\' style=\'width:250px;\' /></td><td>'.wpsc_get_currency_symbol().' <input type=\'text\' name=\'prices[]\' >&nbsp;&nbsp;&nbsp;<a href=\'#\' onclick=\'this.parentNode.parentNode.parentNode.removeChild( this.parentNode.parentNode );\' class=\'delete_button\' >'.__('Delete', 'wpsc').'</a></td></tr>");
-					return false;
-				});
-			});
-		</script>';
-		return $output;
-	}
-
-
+						</tr>
+						<?php if ( ! empty( $layers ) ): ?>
+							<?php
+								foreach( $layers as $key => $shipping ){
+									$this->output_row( $key, $shipping );
+								}
+							?>
+						<?php else: ?>
+							<?php $this->output_row(); ?>
+						<?php endif ?>
+					</tbody>
+				</table>
+			</td>
+		</tr>
+		<?php
+		return ob_get_clean();
+	}	
+	
+	/**
+	 * Saves shipping module settings.
+	 *
+	 * @return boolean Always returns true.
+	 */
 	function submit_form() {
-		$nonce=$_REQUEST['aaaaaa'];
-		//if (! wp_verify_nonce($nonce, 'aaaaaa') ) return false;
-		
-		//if it's not simple shipping - do nothing
-		if($_POST['checkpage'] != 'simple' || !isset($_POST['options'])) return false;
-		
-		if (!isset($_POST['options'])) $_POST['options'] = '';
+		if ( ! isset( $_POST['wpsc_shipping_fixedrate_layer'] ) || ! isset( $_POST['wpsc_shipping_fixedrate_shipping'] ) )
+			return false;
 
-		$options = (array)$_POST['options'];
-		$prices = (array)$_POST['prices'];
-		if ( !empty( $prices ) ) {
-			foreach ($prices as $key => $price) {
-				if ( is_numeric($price) ) {
-					$simple_shipping_options[$options[$key]] = $price;
-				}
+		$layers = (array) $_POST['wpsc_shipping_fixedrate_layer'];
+		$shippings = (array) $_POST['wpsc_shipping_fixedrate_shipping'];
+		$new_layer = array();
+		if ( $shippings != '' ) {
+			foreach ( $shippings as $key => $price ) {
+				if ( ! is_numeric( $key ) || ! is_numeric( $price ) )
+					continue;
+
+				$new_layer[ $layers[ $key ] ] = $price;
 			}
 		}
-		update_option('wpsc_simple_shipping', $simple_shipping_options);
+
+		// Sort the data before it goes into the database. Makes the UI make more sense
+		krsort( $new_layer );
+		update_option( 'fixedrate_layers', $new_layer );
 		return true;
-	}
-
-
+	}	
+	
+	/**
+	 * returns shipping quotes using this shipping module.
+	 *
+	 * @return array collection of rates applicable.
+	 */
 	function getQuote() {
 
 		global $wpdb, $wpsc_cart;
-		if (isset($_SESSION['nzshpcrt_cart'])) {
-			$shopping_cart = $_SESSION['nzshpcrt_cart'];
+		if ( wpsc_get_customer_meta( 'nzshpcart' ) ) {
+			$shopping_cart = wpsc_get_customer_meta( 'nzshpcart' );
 		}
-		if (is_object($wpsc_cart)) {
-			$price = $wpsc_cart->calculate_subtotal(true);
+		if ( is_object( $wpsc_cart ) ) {
+			$price = $wpsc_cart->calculate_subtotal( true );
 		}
 
-		$layers = get_option('wpsc_simple_shipping');
+		$layers = get_option( 'fixedrate_layers' );
 
 		if ($layers != '') {
+
+			// At some point we should probably remove this as the sorting should be
+			// done when we save the data to the database. But need to leave it here
+			// for people who have non-sorted settings in their database
+			krsort( $layers );
 			return $layers;
+
+			
 		}
 	}
 
-
-	function get_item_shipping(&$cart_item) {
+	/**
+	 * calculates shipping price for an individual cart item.
+	 *
+	 * @param object $cart_item (reference)
+	 * @return float price of shipping for the item.
+	 */
+	function get_item_shipping( &$cart_item ) {
 
 		global $wpdb, $wpsc_cart;
 
@@ -136,30 +203,30 @@ class wpsc_simple_shipping {
 		$product_id = $cart_item->product_id;
 
 		$uses_billing_address = false;
-		foreach ($cart_item->category_id_list as $category_id) {
-			$uses_billing_address = (bool)wpsc_get_categorymeta($category_id, 'uses_billing_address');
-			if ($uses_billing_address === true) {
+		foreach ( $cart_item->category_id_list as $category_id ) {
+			$uses_billing_address = (bool) wpsc_get_categorymeta( $category_id, 'uses_billing_address' );
+			if ( $uses_billing_address === true ) {
 				break; /// just one true value is sufficient
 			}
 		}
 
-		if (is_numeric($product_id) && (get_option('do_not_use_shipping') != 1)) {
-			if ($uses_billing_address == true) {
+		if ( is_numeric( $product_id ) && ( get_option( 'do_not_use_shipping' ) != 1 ) ) {
+			if ( $uses_billing_address == true ) {
 				$country_code = $wpsc_cart->selected_country;
 			} else {
 				$country_code = $wpsc_cart->delivery_country;
 			}
 
-			if ($cart_item->uses_shipping == true) {
+			if ( $cart_item->uses_shipping == true ) {
 				//if the item has shipping
 				$additional_shipping = '';
-				if (isset($cart_item->meta[0]['shipping'])) {
+				if ( isset( $cart_item->meta[0]['shipping'] ) ) {
 					$shipping_values = $cart_item->meta[0]['shipping'];
 				}
-				if (isset($shipping_values['local']) && $country_code == get_option('base_country')) {
+				if ( isset( $shipping_values['local'] ) && $country_code == get_option( 'base_country' ) ) {
 					$additional_shipping = $shipping_values['local'];
 				} else {
-					if (isset($shipping_values['international'])) {
+					if ( isset( $shipping_values['international'] ) ) {
 						$additional_shipping = $shipping_values['international'];
 					}
 				}
@@ -177,11 +244,6 @@ class wpsc_simple_shipping {
 
 }
 
-function wpsc_simple_shipping_setup() {
-	global $wpsc_shipping_modules;
-	$simple_shipping = new wpsc_simple_shipping();
-	$wpsc_shipping_modules[$simple_shipping->getInternalName()] = $simple_shipping;
-}
-
-add_action('plugins_loaded', 'wpsc_simple_shipping_setup');
+$wpsc_fixedrate = new wpsc_fixedrate();
+$wpsc_shipping_modules[$wpsc_fixedrate->getInternalName()] = $wpsc_fixedrate;
 ?>
